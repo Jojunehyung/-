@@ -79,7 +79,7 @@
       --r-pill: 9999px;
 
       /* Layout */
-      --container-max: 1240px;
+      --container-max: 1120px;
       --margin: 48px;
       --gutter: 24px;
       --nav-h: 80px;
@@ -985,6 +985,9 @@
     .svc-card h3 { margin: 0; }
     .svc-card .svc-cases { gap: 10px; }
     .svc-card .svc-cases li { font-size: 15px; }
+
+    /* 서비스 — 좌(제목) / 우(캐러셀) 분할, 상단 기준 정렬 */
+    .service-intro { justify-content: flex-start; padding-top: 56px; padding-bottom: 0; }
     .pcar-hint {
       margin-top: 14px;
       text-align: left;
@@ -1161,7 +1164,7 @@
       .promo-visual { margin: 0 -44px 0 24px; }
       .promo-badge { left: 14px; bottom: 22px; }
       .promo-index { top: 22px; right: 26px; }
-      .service-intro { padding-bottom: 0; }
+      .service-intro { padding-top: 0; padding-bottom: 0; }
       .console-frame { margin-top: 8px; }
     }
 

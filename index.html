@@ -376,7 +376,10 @@
        ============================================================ */
     .marquee {
       overflow: hidden;
-      padding: 44px 0;
+      max-width: var(--container-max);
+      margin-left: auto;
+      margin-right: auto;
+      padding: 44px 48px;
       border-top: 1px solid rgba(207, 196, 197, 0.2);
       border-bottom: 1px solid rgba(207, 196, 197, 0.2);
       position: relative;
@@ -987,6 +990,8 @@
 
     /* 서비스 — 좌(제목) / 우(캐러셀) 분할, 상단 기준 정렬 */
     .service-intro { justify-content: flex-start; padding-top: 56px; padding-bottom: 0; }
+    #svc-car { width: 100%; max-width: none; }
+    .pcar-stage, .pcar-slide, .svc-card { width: 100%; min-width: 0; }
     .pcar-hint {
       margin-top: 14px;
       text-align: left;
@@ -1214,7 +1219,7 @@
       .hero-actions .btn svg { width: 14px; height: 14px; }
 
       /* 마퀴 — 페이드 폭·간격 축소 (글자가 잘려 보이는 느낌 방지) */
-      .marquee { padding: 28px 0; }
+      .marquee { padding: 28px 20px; }
       .marquee::before { width: 28px; }
       .marquee-track, .marquee-track ul { gap: 40px; }
 

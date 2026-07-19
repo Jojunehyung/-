@@ -31,7 +31,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=JetBrains+Mono:wght@400..700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" as="style" crossorigin
     href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 
@@ -282,20 +281,20 @@
     }
     .brand {
       display: inline-flex;
-      align-items: flex-start;
+      align-items: flex-end;
       gap: 12px;
       color: var(--on-surface);
     }
     .brand-name {
-      font-family: "Noto Serif KR", "Pretendard Variable", serif;
-      font-size: 13px;
+      font-family: var(--font-sans);
+      font-size: 21px;
       font-weight: 500;
       letter-spacing: 0.08em;
       line-height: 1;
-      transform: translateY(1px);
+      transform: translateY(0.15em);
       color: var(--on-surface);
     }
-    .footer .brand-name { font-size: 11px; }
+    .footer .brand-name { font-size: 16px; }
     .footer-info a:hover { color: var(--primary); }
     .brand svg { height: 30px; width: auto; display: block; }
     .nav-right { display: flex; align-items: center; gap: 32px; }

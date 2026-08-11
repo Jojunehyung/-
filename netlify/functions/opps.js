@@ -25,7 +25,7 @@ export default async (req) => {
   const data = (await store.get("opps", { type: "json" })) || { items: {} };
 
   if (req.method === "GET") {
-    const items = Object.values(data.items).sort((a, b) => total(b) - total(a));
+    const items = Object.values(data.items).sort((a, b) => (total(b) - total(a)) || ((b.budget_manwon || 0) - (a.budget_manwon || 0)));
     return Response.json({ items, updated_at: data.updated_at || null });
   }
 

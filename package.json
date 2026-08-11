@@ -1,0 +1,8 @@
+{
+  "name": "theroa-site",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "latest"
+  }
+}

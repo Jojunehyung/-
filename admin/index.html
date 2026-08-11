@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>더로아 · 관리</title>
+<style>
+:root { --ink:#1c2733; --sub:#5b6b7a; --line:#e3e8ee; --bg:#f6f8fa; --card:#fff;
+        --hi:#0f766e; --mid:#b45309; --low:#94a3b8; --accent:#1d4ed8; }
+* { box-sizing:border-box; margin:0; }
+body { font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:var(--bg); color:var(--ink); padding:16px 12px 70px; }
+.wrap { max-width:760px; margin:0 auto; }
+header { display:flex; justify-content:space-between; align-items:baseline;
+         border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:12px; }
+h1 { font-size:17px; cursor:pointer; }
+.badge { font-size:11.5px; color:var(--sub); }
+.warn { background:#fef3c7; border:1px solid #f59e0b; border-radius:8px;
+        padding:9px 12px; font-size:12.5px; margin-bottom:12px; white-space:pre-wrap; }
+.tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.tabs button { font-size:12.5px; padding:5px 11px; border-radius:999px; cursor:pointer;
+          color:var(--sub); border:1px solid var(--line); background:var(--card); }
+.tabs button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+.row { display:flex; gap:12px; background:var(--card); border:1px solid var(--line);
+       border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+.score { flex:0 0 56px; text-align:center; }
+.score b { display:block; font-size:24px; font-variant-numeric:tabular-nums; }
+.score small { font-size:10px; color:var(--sub); display:block; line-height:1.5; }
+.hi .score b{color:var(--hi)} .mid .score b{color:var(--mid)} .low .score b{color:var(--low)}
+.body { flex:1; min-width:0; }
+.title { font-size:14px; font-weight:700; color:var(--ink); text-decoration:none; word-break:break-all; }
+.meta { color:var(--sub); font-size:11.5px; margin:4px 0 8px; }
+.one { font-size:12.5px; margin-bottom:8px; }
+.acts { display:flex; gap:6px; flex-wrap:wrap; }
+.btn { font-size:12px; padding:5px 10px; border-radius:7px; border:1px solid var(--line);
+       background:var(--card); cursor:pointer; color:var(--ink); }
+.btn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+.btn.chat { border-color:var(--accent); color:var(--accent); }
+.empty { text-align:center; color:var(--sub); padding:48px 14px; background:var(--card);
+         border:1px dashed var(--line); border-radius:10px; font-size:13px; line-height:1.7; }
+.msg { max-width:88%; padding:10px 12px; border-radius:12px; margin-bottom:8px;
+       font-size:13.5px; white-space:pre-wrap; line-height:1.55; }
+.msg.user { background:var(--ink); color:#fff; margin-left:auto; }
+.msg.ai { background:var(--card); border:1px solid var(--line); }
+.ask { display:flex; gap:8px; margin-top:12px; }
+.ask input { flex:1; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; }
+.ask button { padding:10px 16px; border:none; border-radius:8px; background:var(--accent);
+              color:#fff; font-size:14px; cursor:pointer; }
+.ask button:disabled { opacity:.5; }
+#login { max-width:340px; margin:15vh auto 0; }
+#login input { width:100%; padding:12px; font-size:15px; border:1px solid var(--line);
+               border-radius:8px; margin-bottom:10px; }
+#login button { width:100%; padding:11px; border:none; border-radius:8px;
+                background:var(--ink); color:#fff; font-size:15px; cursor:pointer; }
+.err { color:#b91c1c; font-size:13px; margin-bottom:8px; min-height:16px; }
+.hidden { display:none; }
+</style>
+</head>
+<body>
+
+<div id="login" class="hidden">
+  <h1 style="margin-bottom:16px">더로아 대시보드</h1>
+  <p class="err" id="loginErr"></p>
+  <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password">
+  <button id="loginBtn">들어가기</button>
+</div>
+
+<div id="app" class="wrap hidden">
+  <header>
+    <h1 id="home">더로아 · 공고함</h1>
+    <span class="badge" id="updated"></span>
+  </header>
+
+  <div id="listView">
+    <div class="tabs" id="tabs"></div>
+    <div id="list"></div>
+  </div>
+
+  <div id="chatView" class="hidden">
+    <div class="row"><div class="body">
+      <a class="title" id="chatTitle" target="_blank" rel="noopener"></a>
+      <p class="meta" id="chatMeta"></p>
+    </div></div>
+    <div class="warn hidden" id="chatWarn"></div>
+    <div id="msgs"></div>
+    <div class="ask">
+      <input id="q" placeholder='예: "견적 얼마가 적당해?" · "리스크 뭐야?"'>
+      <button id="send">질문</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const STATUSES = { interested: "관심", applied: "지원함", skipped: "보류" };
+const TABS = [["all","전체"],["new","신규"],["interested","관심"],["applied","지원함"],["skipped","보류"]];
+let token = localStorage.getItem("theroa_token") || "";
+let items = [], filter = "all", currentId = null;
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts,
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token, ...(opts.headers || {}) } });
+  if (res.status === 401 && path !== "/api/auth") { showLogin(); throw new Error("unauthorized"); }
+  return res;
+}
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+// ── 로그인 ──────────────────────────────────────────
+function showLogin() { $("login").classList.remove("hidden"); $("app").classList.add("hidden"); }
+function showApp()   { $("login").classList.add("hidden");   $("app").classList.remove("hidden"); }
+
+$("loginBtn").onclick = async () => {
+  const res = await fetch("/api/auth", { method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: $("pw").value }) });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) { $("loginErr").textContent = out.error || "로그인 실패"; return; }
+  token = out.token; localStorage.setItem("theroa_token", token);
+  showApp(); load();
+};
+$("pw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loginBtn").click(); });
+
+// ── 목록 ────────────────────────────────────────────
+const total = (o) => { const a = o.analysis || {};
+  return Number.isInteger(a.total_score) ? a.total_score : (Number.isInteger(a.fit_score) ? a.fit_score : -1); };
+
+async function load() {
+  const res = await api("/api/opps");
+  const out = await res.json();
+  items = out.items || [];
+  $("updated").textContent = out.updated_at ? "갱신 " + out.updated_at.slice(5, 16).replace("T", " ") : "";
+  render();
+}
+
+function render() {
+  const tabs = $("tabs"); tabs.replaceChildren();
+  for (const [k, label] of TABS) {
+    const b = el("button", k === filter ? "on" : "", label);
+    b.onclick = () => { filter = k; render(); };
+    tabs.appendChild(b);
+  }
+
+  const list = $("list"); list.replaceChildren();
+  const shown = items.filter((o) => filter === "all" || (o.status || "new") === filter);
+  if (!shown.length) {
+    const e = el("div", "empty");
+    e.append("아직 공고가 없습니다.", el("br"), "수집기(GitHub Actions)가 아침에 채워 넣거나,", el("br"),
+      "배포 가이드의 데모 curl 명령으로 예시를 넣어 확인할 수 있어요.");
+    list.appendChild(e); return;
+  }
+  for (const o of shown) list.appendChild(rowEl(o));
+}
+
+function rowEl(o) {
+  const a = o.analysis || {}, t = total(o);
+  const row = el("div", "row " + (t >= 80 ? "hi" : t >= 60 ? "mid" : "low"));
+
+  const score = el("div", "score");
+  score.appendChild(el("b", "", t >= 0 ? String(t) : "–"));
+  score.appendChild(el("small", "", "종합"));
+  if (Number.isInteger(a.fit_score)) {
+    score.appendChild(el("small", "", `적합 ${a.fit_score}`));
+    score.appendChild(el("small", "", `자동 ${Number.isInteger(a.auto_score) ? a.auto_score : "-"}`));
+  }
+  row.appendChild(score);
+
+  const body = el("div", "body");
+  const title = el("a", "title", o.title || "(제목 없음)");
+  title.href = o.url || "#"; title.target = "_blank"; title.rel = "noopener";
+  body.appendChild(title);
+
+  const meta = [o.source, o.org, o.budget_manwon ? o.budget_manwon.toLocaleString() + "만원" : "",
+    o.deadline ? "마감 " + o.deadline : ""].filter(Boolean).join(" · ");
+  body.appendChild(el("p", "meta", meta));
+  if (a.one_line) body.appendChild(el("p", "one", a.one_line));
+
+  const acts = el("div", "acts");
+  for (const [s, label] of Object.entries(STATUSES)) {
+    const b = el("button", "btn" + ((o.status || "new") === s ? " on" : ""), label);
+    b.onclick = async () => {
+      const next = (o.status || "new") === s ? "new" : s;
+      await api("/api/opps", { method: "POST", body: JSON.stringify({ id: o.id, status: next }) });
+      o.status = next; render();
+    };
+    acts.appendChild(b);
+  }
+  const chatBtn = el("button", "btn chat", "AI 상담 →");
+  chatBtn.onclick = () => openChat(o.id);
+  acts.appendChild(chatBtn);
+  body.appendChild(acts);
+
+  row.appendChild(body);
+  return row;
+}
+
+// ── AI 상담 ─────────────────────────────────────────
+async function openChat(id) {
+  currentId = id;
+  const o = items.find((x) => x.id === id); if (!o) return;
+  $("listView").classList.add("hidden"); $("chatView").classList.remove("hidden");
+  $("chatTitle").textContent = o.title; $("chatTitle").href = o.url || "#";
+  $("chatMeta").textContent = [o.source, o.budget_manwon ? o.budget_manwon.toLocaleString() + "만원" : ""]
+    .filter(Boolean).join(" · ");
+  $("chatWarn").classList.add("hidden");
+  renderMsgs([]);
+  const res = await api("/api/chat?id=" + encodeURIComponent(id));
+  const out = await res.json();
+  renderMsgs(out.messages || []);
+}
+
+function renderMsgs(msgs) {
+  const box = $("msgs"); box.replaceChildren();
+  if (!msgs.length) {
+    const e = el("div", "empty");
+    e.append("이 공고에 대해 뭐든 물어보세요.", el("br"), '예: "견적 얼마가 적당해?" · "제안서에 뭘 강조할까?"');
+    box.appendChild(e); return;
+  }
+  for (const m of msgs) box.appendChild(el("div", "msg " + (m.role === "user" ? "user" : "ai"), m.content));
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+$("send").onclick = async () => {
+  const q = $("q").value.trim(); if (!q || !currentId) return;
+  $("send").disabled = true; $("q").value = "";
+  const res = await api("/api/chat", { method: "POST", body: JSON.stringify({ id: currentId, question: q }) });
+  const out = await res.json().catch(() => ({}));
+  $("send").disabled = false;
+  if (!res.ok) { $("chatWarn").textContent = out.error || "오류가 발생했습니다."; $("chatWarn").classList.remove("hidden"); return; }
+  const r2 = await api("/api/chat?id=" + encodeURIComponent(currentId));
+  renderMsgs((await r2.json()).messages || []);
+};
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send").click(); });
+$("home").onclick = () => { $("chatView").classList.add("hidden"); $("listView").classList.remove("hidden"); load(); };
+
+// ── 시작 ────────────────────────────────────────────
+if (token) { showApp(); load().catch(() => showLogin()); } else { showLogin(); }
+</script>
+</body>
+</html>

@@ -48,6 +48,8 @@ h1 { font-size:17px; cursor:pointer; }
 .ask button { padding:10px 16px; border:none; border-radius:8px; background:var(--accent);
               color:#fff; font-size:14px; cursor:pointer; }
 .ask button:disabled { opacity:.5; }
+.ask .copy { background:var(--card); color:var(--accent); border:1px solid var(--accent); }
+.hint { font-size:11.5px; color:var(--sub); margin-top:8px; }
 #login { max-width:340px; margin:15vh auto 0; }
 #login input { width:100%; padding:12px; font-size:15px; border:1px solid var(--line);
                border-radius:8px; margin-bottom:10px; }
@@ -86,8 +88,10 @@ h1 { font-size:17px; cursor:pointer; }
     <div id="msgs"></div>
     <div class="ask">
       <input id="q" placeholder='예: "견적 얼마가 적당해?" · "리스크 뭐야?"'>
+      <button id="copyBtn" class="copy">복사</button>
       <button id="send">질문</button>
     </div>
+    <p class="hint">크레딧 없이(0원 모드) 상담하려면: 질문 입력 → 복사 → Claude 앱에 붙여넣기</p>
   </div>
 </div>
 
@@ -226,13 +230,51 @@ function renderMsgs(msgs) {
   window.scrollTo(0, document.body.scrollHeight);
 }
 
+function buildConsultText(o, q) {
+  const a = o.analysis || {};
+  const lines = [
+    "[더로아 영업 상담 요청]",
+    "나는 1인 소프트웨어 개발사 '더로아' 대표야. 본업이 있어 투잡으로 운영해 — 원격만 가능, 주 10~15시간, 혼자 2~3개월 안에 끝낼 수 있는 일만 받아.",
+    "주력: 문서·데이터 자동화(엑셀/워드), 데이터 정리·표준화, 소규모 업무 프로그램, 소규모 웹·대시보드, 유지보수. AI 활용 고속 개발이 강점.",
+    "",
+    "아래 공고를 개발 담당 관점에서 검토해줘 — 바이브코딩으로 구현 가능한 부분과 사람 손이 필요한 부분, 예상 투입(주당 시간×기간), 수주 목표가 범위(만원), 리스크:",
+    "",
+    "제목: " + (o.title || ""),
+    o.org ? "기관: " + o.org : "",
+    o.budget_manwon ? "예산: " + o.budget_manwon.toLocaleString() + "만원" : "",
+    o.deadline ? "마감: " + o.deadline : "",
+    "출처: " + (o.source || "") + (o.url ? " · " + o.url : ""),
+  ].filter(Boolean);
+  if (a.one_line || a.reason) lines.push("", "기존 자동 분석: " + [a.one_line, a.reason].filter(Boolean).join(" / "));
+  lines.push("", "내 질문: " + (q || "이 건, 지원할 만해?"));
+  return lines.join("\n");
+}
+
+$("copyBtn").onclick = async () => {
+  const o = items.find((x) => x.id === currentId); if (!o) return;
+  const text = buildConsultText(o, $("q").value.trim());
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const t = document.createElement("textarea"); t.value = text;
+    document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove();
+  }
+  $("copyBtn").textContent = "복사됨!";
+  setTimeout(() => { $("copyBtn").textContent = "복사"; }, 1500);
+};
+
 $("send").onclick = async () => {
   const q = $("q").value.trim(); if (!q || !currentId) return;
   $("send").disabled = true; $("q").value = "";
   const res = await api("/api/chat", { method: "POST", body: JSON.stringify({ id: currentId, question: q }) });
   const out = await res.json().catch(() => ({}));
   $("send").disabled = false;
-  if (!res.ok) { $("chatWarn").textContent = out.error || "오류가 발생했습니다."; $("chatWarn").classList.remove("hidden"); return; }
+  if (!res.ok) {
+    const e = out.error || "오류가 발생했습니다.";
+    $("chatWarn").textContent = e.includes("ANTHROPIC_API_KEY")
+      ? "자동 상담은 꺼져 있어요(0원 모드). '복사' 버튼으로 질문을 복사해 Claude 앱에 붙여넣으면 구독으로 무료 상담이 됩니다."
+      : e;
+    $("chatWarn").classList.remove("hidden"); return;
+  }
   const r2 = await api("/api/chat?id=" + encodeURIComponent(currentId));
   renderMsgs((await r2.json()).messages || []);
 };

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>더로아 콘솔</title>
+<style>
+:root { --bg:#131316; --panel:#1B1B1E; --canvas:#17171A; --card:#26262B; --card2:#222227;
+        --line:#33333A; --line2:#3F3F47; --txt:#F1EFE8; --sub:#A9A8AF; --mut:#7C7B82;
+        --teal:#5DCAA5; --teal-d:#04342C; --amber:#FAC775; --amber-d:#412402; --red:#F09595; }
+* { box-sizing:border-box; margin:0; }
+html,body { height:100%; }
+body { font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:var(--bg); color:var(--txt); display:flex; overflow:hidden; }
+
+/* ── 사이드바: 부서 목록 상시 노출 ── */
+aside { width:216px; min-width:216px; background:var(--panel); border-right:1px solid var(--line);
+        display:flex; flex-direction:column; }
+.logo { padding:16px 16px 12px; font-size:15px; font-weight:700; letter-spacing:-0.01em; }
+.logo span { color:var(--teal); }
+.sec { padding:10px 16px 6px; font-size:10.5px; color:var(--mut); letter-spacing:0.06em; }
+.dept { display:flex; align-items:center; gap:9px; padding:9px 16px; cursor:pointer;
+        font-size:13px; color:var(--sub); border-left:2px solid transparent; }
+.dept:hover { background:#202024; color:var(--txt); }
+.dept.on { background:#232329; color:var(--txt); border-left-color:var(--teal); }
+.dot { width:7px; height:7px; border-radius:50%; flex:0 0 7px; }
+.dot.run{background:var(--teal)} .dot.spec{background:var(--amber)} .dot.plan{background:#55555C}
+.side-foot { margin-top:auto; border-top:1px solid var(--line); padding:10px 8px; }
+.side-foot a, .side-foot button { display:flex; gap:8px; align-items:center; width:100%; text-align:left;
+  padding:8px; font-size:12.5px; color:var(--sub); background:none; border:none; border-radius:8px;
+  cursor:pointer; text-decoration:none; font-family:inherit; }
+.side-foot a:hover, .side-foot button:hover { background:#202024; color:var(--txt); }
+
+/* ── 메인 ── */
+main { flex:1; display:flex; flex-direction:column; min-width:0; }
+header { display:flex; align-items:center; gap:14px; padding:10px 16px;
+         background:var(--panel); border-bottom:1px solid var(--line); }
+.dname { font-size:15px; font-weight:700; }
+.pill { font-size:11px; padding:3px 10px; border-radius:999px; }
+.pill.run{background:var(--teal-d); color:var(--teal)} .pill.spec{background:var(--amber-d); color:var(--amber)}
+.pill.plan{background:#26262B; color:var(--mut)}
+.tabs { display:flex; gap:2px; margin-left:8px; background:#131316; border:1px solid var(--line);
+        border-radius:9px; padding:2px; }
+.tabs button { font-size:12.5px; padding:6px 13px; border:none; border-radius:7px; cursor:pointer;
+        background:none; color:var(--sub); font-family:inherit; }
+.tabs button.on { background:var(--card); color:var(--txt); }
+.run-btn { margin-left:auto; display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600;
+        padding:8px 16px; border:none; border-radius:9px; background:var(--teal); color:var(--teal-d);
+        cursor:pointer; font-family:inherit; }
+.run-btn:hover { filter:brightness(1.06); }
+.run-btn:disabled { opacity:.55; cursor:default; }
+
+/* ── 캔버스 ── */
+.stage { flex:1; position:relative; overflow:auto; background:var(--canvas);
+         background-image:radial-gradient(#26262C 1px, transparent 1px); background-size:22px 22px; }
+.board { position:relative; width:520px; height:480px; margin:24px auto; }
+svg.wires { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.node { position:absolute; width:176px; background:var(--card); border:1px solid var(--line2);
+        border-radius:11px; padding:10px 12px; cursor:pointer; }
+.node:hover { border-color:#55555F; }
+.node.sel { border:2px solid var(--teal); padding:9px 11px; }
+.node.off { background:#1E1E22; border-style:dashed; }
+.node .nm { font-size:13px; display:flex; align-items:center; gap:7px; }
+.node .nm i { color:var(--teal); font-style:normal; }
+.node.off .nm, .node.off .nm i { color:var(--mut); }
+.node .sub { font-size:11.5px; margin-top:4px; color:var(--sub); }
+.node .sub.ok{color:var(--teal)} .node .sub.warn{color:var(--amber)}
+.empty-canvas { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.empty-box { border:1.5px dashed #45454d; border-radius:14px; padding:26px 30px; text-align:center;
+             color:var(--mut); font-size:13px; line-height:1.8; background:rgba(19,19,22,.55); }
+
+/* ── 실행 이력 ── */
+.hist { flex:1; overflow:auto; padding:18px 20px; display:none; }
+.hist table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.hist th { text-align:left; color:var(--mut); font-weight:500; padding:6px 10px; border-bottom:1px solid var(--line); }
+.hist td { padding:9px 10px; border-bottom:1px solid #202025; color:var(--sub); }
+.hist td.ok{color:var(--teal)} .hist td.bad{color:var(--red)}
+
+/* ── 설정 드로어 ── */
+.drawer { width:288px; min-width:288px; background:var(--panel); border-left:1px solid var(--line);
+          padding:16px; display:none; flex-direction:column; gap:12px; overflow:auto; }
+.drawer.open { display:flex; }
+.drawer h3 { font-size:13.5px; display:flex; justify-content:space-between; align-items:center; }
+.drawer h3 button { background:none; border:none; color:var(--mut); cursor:pointer; font-size:15px; }
+.field label { display:block; font-size:11.5px; color:var(--sub); margin-bottom:5px; }
+.field input, .field select { width:100%; padding:9px 10px; font-size:13px; color:var(--txt);
+        background:#131316; border:1px solid var(--line2); border-radius:8px; font-family:inherit; }
+.field input:focus { outline:none; border-color:var(--teal); }
+.save { padding:9px 0; font-size:13px; font-weight:600; border:none; border-radius:8px;
+        background:var(--teal); color:var(--teal-d); cursor:pointer; font-family:inherit; }
+.d-note { font-size:11px; color:var(--mut); line-height:1.6; }
+
+/* ── 하단 로그 스트립 / 토스트 ── */
+.logbar { padding:8px 16px; font-size:11.5px; color:var(--mut); background:var(--panel);
+          border-top:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2A2A31;
+         border:1px solid var(--line2); color:var(--txt); font-size:12.5px; padding:10px 16px;
+         border-radius:10px; opacity:0; transition:opacity .2s; pointer-events:none; max-width:86vw; }
+.toast.show { opacity:1; }
+.banner { background:var(--amber-d); color:var(--amber); font-size:12px; padding:8px 16px; }
+.banner a { color:var(--amber); }
+
+@media (max-width:760px) {
+  body { flex-direction:column; overflow:auto; }
+  aside { width:100%; min-width:0; flex-direction:row; align-items:center; overflow-x:auto; }
+  .logo { padding:12px; white-space:nowrap; }
+  .sec, .side-foot { display:none; }
+  .dept { border-left:none; border-bottom:2px solid transparent; white-space:nowrap; padding:12px 10px; }
+  .dept.on { border-bottom-color:var(--teal); }
+  .drawer { width:100%; min-width:0; border-left:none; border-top:1px solid var(--line); }
+  main { min-height:70vh; }
+}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="logo">the<span>RoA</span> 콘솔</div>
+  <div class="sec">부서</div>
+  <div id="deptList"></div>
+  <div class="side-foot">
+    <a href="/admin/"><span>▤</span> 공고함</a>
+    <button id="logout"><span>⎋</span> 로그아웃</button>
+  </div>
+</aside>
+
+<main>
+  <div class="banner" id="banner" style="display:none"></div>
+  <header>
+    <span class="dname" id="dname">—</span>
+    <span class="pill" id="dpill"></span>
+    <div class="tabs">
+      <button id="tabEdit" class="on">편집기</button>
+      <button id="tabHist">실행 이력</button>
+    </div>
+    <button class="run-btn" id="runBtn">▶ 지금 실행</button>
+  </header>
+
+  <div class="stage" id="stage"><div class="board" id="board"></div></div>
+
+  <div class="hist" id="hist"></div>
+
+  <div class="logbar" id="logbar"></div>
+</main>
+
+<div class="drawer" id="drawer"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const DEMO = location.protocol === "file:";
+const token = localStorage.getItem("theroa_token") || "";
+
+/* ── 부서·워크플로 정의 (v1: 정적 → v2에서 서버 graph로 대체) ── */
+const DEPTS = [
+  { id:"lead", name:"영업발굴팀", org:"영업본부", status:"run", statusTxt:"가동 중",
+    graph:{ nodes:[
+      { id:"nara",  x:22,  y:16,  icon:"⛁", name:"나라장터", sub:"42건 수집", tone:"ok" },
+      { id:"wish",  x:322, y:16,  icon:"⛁", name:"위시켓",   sub:"8건 수집",  tone:"ok" },
+      { id:"filter",x:172, y:132, icon:"⧩", name:"투잡 필터", sub:"18건 통과 · 32건 제외", tone:"ok",
+        settings:[ {k:"keywords", label:"검색 키워드 (쉼표로 구분)", type:"text",
+                    v:"홈페이지, 웹사이트, 유지보수, 유지관리, 데이터 구축, 자동화"},
+                   {k:"max_budget", label:"예산 상한 (만원)", type:"number", v:"3000"} ] },
+      { id:"score", x:172, y:248, icon:"✦", name:"AI 채점", sub:"꺼짐 · 0원 모드", tone:"off",
+        settings:[ {k:"enabled", label:"채점 사용 (API 크레딧 필요)", type:"select", v:"off",
+                    opts:[["off","끄기 (0원 모드)"],["on","켜기"]]} ] },
+      { id:"dash",  x:22,  y:372, icon:"▦", name:"대시보드 전송", sub:"신규 12건", tone:"ok" },
+      { id:"tg",    x:322, y:372, icon:"➤", name:"텔레그램 알림", sub:"미설정", tone:"warn",
+        settings:[ {k:"notify", label:"아침 알림", type:"select", v:"off",
+                    opts:[["off","끄기"],["on","켜기 (봇 토큰 필요)"]]} ] } ],
+      edges:[["nara","filter"],["wish","filter"],["filter","score"],["score","dash"],["score","tg"]] },
+    runs:[ {t:"08-12 08:00", ok:true,  note:"수집 50 · 필터 18 · 신규 12"},
+           {t:"08-11 08:00", ok:true,  note:"수집 44 · 필터 15 · 신규 9"},
+           {t:"08-10 08:01", ok:false, note:"나라장터 응답 지연 — 재시도 후 정상"} ] },
+  { id:"inbound",  name:"고객상담팀",   org:"영업본부",   status:"spec", statusTxt:"지시서 준비됨" },
+  { id:"proposal", name:"제안견적팀",   org:"영업본부",   status:"spec", statusTxt:"지시서 준비됨" },
+  { id:"qa",       name:"QA팀",        org:"개발본부",   status:"plan", statusTxt:"신설 예정" },
+  { id:"maint",    name:"유지보수팀",   org:"운영본부",   status:"plan", statusTxt:"신설 예정" },
+  { id:"monitor",  name:"모니터링팀",   org:"운영본부",   status:"plan", statusTxt:"신설 예정" },
+  { id:"finance",  name:"재무회계팀",   org:"경영지원본부", status:"plan", statusTxt:"신설 예정" },
+  { id:"legal",    name:"법무팀",      org:"경영지원본부", status:"plan", statusTxt:"신설 예정" },
+  { id:"weekly",   name:"주간 경영리포트", org:"전략기획실", status:"spec", statusTxt:"지시서 준비됨" },
+  { id:"mkt",      name:"마케팅홍보팀", org:"전략기획실", status:"plan", statusTxt:"신설 예정" },
+];
+let cur = DEPTS[0], selNode = null;
+
+/* ── 인증 배너 ── */
+if (!DEMO && !token) {
+  $("banner").style.display = "block";
+  $("banner").innerHTML = '로그인이 필요합니다 — <a href="/admin/">공고함에서 로그인</a> 후 다시 열어주세요.';
+}
+if (DEMO) {
+  $("banner").style.display = "block";
+  $("banner").textContent = "데모 모드 — 파일로 직접 연 상태입니다. 배포 후 /admin/console.html 에서 실데이터로 동작합니다.";
+}
+
+/* ── 사이드바 ── */
+function renderSidebar() {
+  const box = $("deptList"); box.replaceChildren();
+  let lastOrg = "";
+  for (const d of DEPTS) {
+    if (d.org !== lastOrg && window.innerWidth > 760) {
+      const s = document.createElement("div"); s.className = "sec"; s.textContent = d.org;
+      box.appendChild(s); lastOrg = d.org;
+    }
+    const el = document.createElement("div");
+    el.className = "dept" + (d.id === cur.id ? " on" : "");
+    el.innerHTML = `<span class="dot ${d.status}"></span>${d.name}`;
+    el.onclick = () => { cur = d; selNode = null; closeDrawer(); renderAll(); };
+    box.appendChild(el);
+  }
+}
+
+/* ── 캔버스 ── */
+function renderCanvas() {
+  const board = $("board"); board.replaceChildren();
+  if (!cur.graph) {
+    board.innerHTML = `<div class="empty-canvas"><div class="empty-box">
+      아직 워크플로가 없는 부서입니다<br>
+      업무지시서(SPEC)는 준비되어 있어요 — 가동되면 노드가 여기 나타납니다</div></div>`;
+    return;
+  }
+  const W = 176, H = 58;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "wires");
+  for (const [a, b] of cur.graph.edges) {
+    const n1 = cur.graph.nodes.find(n => n.id === a), n2 = cur.graph.nodes.find(n => n.id === b);
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const x1 = n1.x + W/2, y1 = n1.y + H, x2 = n2.x + W/2, y2 = n2.y;
+    l.setAttribute("d", `M ${x1} ${y1} C ${x1} ${y1+34}, ${x2} ${y2-34}, ${x2} ${y2}`);
+    l.setAttribute("stroke", "#45454D"); l.setAttribute("stroke-width", "1.6"); l.setAttribute("fill", "none");
+    svg.appendChild(l);
+  }
+  board.appendChild(svg);
+  for (const n of cur.graph.nodes) {
+    const el = document.createElement("div");
+    el.className = "node" + (n.tone === "off" ? " off" : "") + (selNode === n.id ? " sel" : "");
+    el.style.left = n.x + "px"; el.style.top = n.y + "px";
+    el.innerHTML = `<div class="nm"><i>${n.icon}</i>${n.name}</div>
+      <div class="sub ${n.tone === "ok" ? "ok" : n.tone === "warn" ? "warn" : ""}">${n.sub}</div>`;
+    el.onclick = () => { selNode = n.id; openDrawer(n); renderCanvas(); };
+    board.appendChild(el);
+  }
+}
+
+/* ── 설정 드로어 ── */
+function openDrawer(n) {
+  const d = $("drawer"); d.classList.add("open"); d.replaceChildren();
+  const h = document.createElement("h3");
+  h.innerHTML = `${n.name} 설정 <button aria-label="닫기">✕</button>`;
+  h.querySelector("button").onclick = closeDrawer;
+  d.appendChild(h);
+  if (!n.settings) {
+    const p = document.createElement("p"); p.className = "d-note";
+    p.textContent = "이 노드는 조정할 값이 없습니다. 실행 결과만 표시돼요.";
+    d.appendChild(p); return;
+  }
+  const inputs = [];
+  for (const f of n.settings) {
+    const w = document.createElement("div"); w.className = "field";
+    const lb = document.createElement("label"); lb.textContent = f.label; w.appendChild(lb);
+    let inp;
+    if (f.type === "select") {
+      inp = document.createElement("select");
+      for (const [v, t] of f.opts) {
+        const o = document.createElement("option"); o.value = v; o.textContent = t;
+        if (v === f.v) o.selected = true; inp.appendChild(o);
+      }
+    } else {
+      inp = document.createElement("input"); inp.type = f.type; inp.value = f.v;
+    }
+    inputs.push([f, inp]); w.appendChild(inp); d.appendChild(w);
+  }
+  const btn = document.createElement("button"); btn.className = "save"; btn.textContent = "저장";
+  btn.onclick = async () => {
+    for (const [f, inp] of inputs) f.v = inp.value;
+    if (n.id === "filter") n.sub = "저장됨 · 다음 실행부터 반영";
+    try {
+      const r = await fetch("/api/settings?dept=" + cur.id, { method:"POST",
+        headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
+        body: JSON.stringify({ node:n.id, values:Object.fromEntries(n.settings.map(f=>[f.k,f.v])) }) });
+      toast(r.ok ? "저장 완료 — 다음 실행부터 반영됩니다" : "화면에는 반영됨 · 서버 저장은 v1 백엔드 연결 후");
+    } catch { toast("화면에는 반영됨 · 서버 저장은 배포 후 동작합니다"); }
+    renderCanvas();
+  };
+  d.appendChild(btn);
+  const note = document.createElement("p"); note.className = "d-note";
+  note.textContent = "저장하면 다음 자동 실행(평일 08:00)부터 적용됩니다. 승인 게이트 항목은 여기서 바꿀 수 없어요.";
+  d.appendChild(note);
+}
+function closeDrawer(){ $("drawer").classList.remove("open"); selNode = null; }
+
+/* ── 실행 이력 / 탭 ── */
+function renderHist() {
+  const h = $("hist");
+  const rows = (cur.runs || []).map(r =>
+    `<tr><td>${r.t}</td><td class="${r.ok ? "ok" : "bad"}">${r.ok ? "성공" : "경고"}</td><td>${r.note}</td></tr>`).join("");
+  h.innerHTML = rows
+    ? `<table><tr><th>실행 시각</th><th>결과</th><th>요약</th></tr>${rows}</table>`
+    : `<p style="color:var(--mut); font-size:13px;">아직 실행 기록이 없습니다.</p>`;
+}
+$("tabEdit").onclick = () => setTab(true);
+$("tabHist").onclick = () => setTab(false);
+function setTab(edit) {
+  $("tabEdit").classList.toggle("on", edit); $("tabHist").classList.toggle("on", !edit);
+  $("stage").style.display = edit ? "block" : "none";
+  $("hist").style.display  = edit ? "none" : "block";
+}
+
+/* ── 실행 버튼 ── */
+$("runBtn").onclick = async () => {
+  if (!cur.graph) { toast("이 부서는 아직 가동 전입니다 — 지시서만 있어요"); return; }
+  $("runBtn").disabled = true;
+  try {
+    const r = await fetch("/api/run", { method:"POST",
+      headers:{ "Content-Type":"application/json", Authorization:"Bearer " + token },
+      body: JSON.stringify({ dept: cur.id }) });
+    toast(r.ok ? "실행 요청 완료 — 1~2분 뒤 결과가 반영됩니다"
+               : "실행 API는 v1 백엔드 연결 후 동작합니다 (지금은 GitHub Actions에서 Run workflow)");
+  } catch { toast(DEMO ? "데모 모드 — 배포 후 실제 실행됩니다" : "실행 API 연결 전 — GitHub Actions에서 Run workflow"); }
+  setTimeout(() => { $("runBtn").disabled = false; }, 1200);
+};
+
+/* ── 공통 ── */
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600);
+}
+$("logout").onclick = () => { localStorage.removeItem("theroa_token"); location.href = "/admin/"; };
+function renderAll() {
+  renderSidebar();
+  $("dname").textContent = cur.name;
+  $("dpill").textContent = cur.statusTxt; $("dpill").className = "pill " + cur.status;
+  renderCanvas(); renderHist(); setTab(true);
+  const last = (cur.runs || [])[0];
+  $("logbar").textContent = last ? `마지막 실행 ${last.t} · ${last.note}` : "실행 기록 없음";
+}
+renderAll();
+
+/* ── 서버 실데이터 연결 (v1 백엔드) ── */
+async function loadServer() {
+  if (DEMO || !token) return;
+  try {
+    const r = await fetch("/api/console", { headers: { Authorization: "Bearer " + token } });
+    if (!r.ok) return;
+    const d = await r.json();
+    for (const dept of DEPTS) {
+      if (d.runs && Array.isArray(d.runs[dept.id]) && d.runs[dept.id].length) dept.runs = d.runs[dept.id];
+      const st = d.settings && d.settings[dept.id];
+      if (st && dept.graph) {
+        for (const n of dept.graph.nodes) {
+          const vals = st[n.id];
+          if (!vals || !n.settings) continue;
+          for (const f of n.settings) if (vals[f.k] !== undefined) f.v = String(vals[f.k]);
+        }
+      }
+    }
+    const lead = DEPTS[0], last = (lead.runs || [])[0];
+    if (last && last.counts && lead.graph) {
+      const c = last.counts, g = (id) => lead.graph.nodes.find(n => n.id === id);
+      if (c.nara !== undefined) { g("nara").sub = c.nara + "건 수집"; g("nara").tone = "ok"; }
+      if (c.wish !== undefined) { g("wish").sub = c.wish + "건 수집"; g("wish").tone = "ok"; }
+      if (c.passed !== undefined) g("filter").sub = `${c.passed}건 통과 · ${c.dropped ?? 0}건 제외`;
+      if (c.new !== undefined) g("dash").sub = "신규 " + c.new + "건 전송";
+      if (c.notified !== undefined) { g("tg").sub = c.notified + "건 알림"; g("tg").tone = c.notified ? "ok" : "warn"; }
+    }
+    renderAll();
+  } catch { /* 서버 미연결 시 데모 데이터 유지 */ }
+}
+loadServer();
+window.addEventListener("resize", renderSidebar);
+</script>
+</body>
+</html>

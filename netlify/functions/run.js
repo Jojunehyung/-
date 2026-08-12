@@ -32,7 +32,7 @@ export default async (req) => {
     );
   }
 
-  const store = getStore("dashboard");
+  const store = getStore({ name: "dashboard", consistency: "strong" });
   const lock = await store.get(`runlock:${body.dept}`, { type: "json" });
   if (lock && Date.now() - lock.t < 60000) {
     return Response.json({ error: "1분에 한 번만 실행할 수 있어요. 잠시 후 다시 시도하세요." }, { status: 429 });

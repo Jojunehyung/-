@@ -64,7 +64,7 @@ export default async (req) => {
   }
 
   const ip = req.headers.get("x-nf-client-connection-ip") || "unknown";
-  const sec = getStore("security");
+  const sec = getStore({ name: "security", consistency: "strong" });
   const failKey = `fail:${ip}`;
   const rec = (await sec.get(failKey, { type: "json" })) || { count: 0, until: 0 };
 

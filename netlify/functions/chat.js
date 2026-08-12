@@ -24,7 +24,7 @@ const SYSTEM = `너는 1인 소프트웨어 개발사 '더로아'의 개발 책�
 
 export default async (req) => {
   if (!authed(req)) return Response.json({ error: "unauthorized" }, { status: 401 });
-  const store = getStore("dashboard");
+  const store = getStore({ name: "dashboard", consistency: "strong" });
 
   if (req.method === "GET") {
     const id = new URL(req.url).searchParams.get("id") || "";

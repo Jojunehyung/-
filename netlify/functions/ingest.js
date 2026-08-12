@@ -19,7 +19,7 @@ function keyOk(req) {
 
 export default async (req) => {
   if (!keyOk(req)) return Response.json({ error: "unauthorized" }, { status: 401 });
-  const store = getStore("dashboard");
+  const store = getStore({ name: "dashboard", consistency: "strong" });
   const data = (await store.get("opps", { type: "json" })) || { items: {} };
 
   if (req.method === "GET") {

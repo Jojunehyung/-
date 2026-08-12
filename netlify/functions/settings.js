@@ -18,7 +18,7 @@ function ingestOk(req) {
 
 export default async (req) => {
   const dept = new URL(req.url).searchParams.get("dept") || "lead";
-  const store = getStore("dashboard");
+  const store = getStore({ name: "dashboard", consistency: "strong" });
   const key = `settings:${dept}`;
 
   if (req.method === "GET") {

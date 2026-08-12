@@ -17,7 +17,7 @@ export default async (req) => {
   if (req.method !== "GET") return new Response("Method Not Allowed", { status: 405 });
   if (!authed(req)) return Response.json({ error: "unauthorized" }, { status: 401 });
 
-  const store = getStore("dashboard");
+  const store = getStore({ name: "dashboard", consistency: "strong" });
   const runs = {}, settings = {};
   for (const id of DEPT_IDS) {
     runs[id] = (await store.get(`runs:${id}`, { type: "json" })) || [];

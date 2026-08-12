@@ -41,6 +41,17 @@ export default async (req) => {
     return Response.json({ ok: true });
   }
 
+  if (req.method === "DELETE") {
+    let body = {};
+    try { body = await req.json(); } catch { /* noop */ }
+    if (!body.id || !data.items[body.id]) {
+      return Response.json({ error: "not found" }, { status: 404 });
+    }
+    delete data.items[body.id];
+    await store.setJSON("opps", data);
+    return Response.json({ ok: true });
+  }
+
   return new Response("Method Not Allowed", { status: 405 });
 };
 

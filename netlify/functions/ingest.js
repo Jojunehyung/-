@@ -24,6 +24,8 @@ export default async (req) => {
     let added = 0;
     const now = new Date().toISOString();
 
+    // 정책: 수집기는 공고를 추가·갱신만 한다. 원본이 플랫폼에서 내려가도 자동 삭제하지 않는다.
+    // 공고 삭제는 오직 대표가 공고함/콘솔에서 🗑 삭제를 눌렀을 때만 일어난다 (DELETE /api/opps).
     for (const it of incoming) {
       if (!it || !it.id) continue;
       const prev = data.items[it.id];

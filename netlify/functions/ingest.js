@@ -38,6 +38,15 @@ export default async (req) => {
     await store.setJSON("opps", data);
 
     if (body.profile) await store.setJSON("profile", body.profile); // AI 상담 컨텍스트용
+
+    // 수집기의 실행 요약 → 콘솔 실행 이력에 기록
+    if (body.run && body.run.dept) {
+      const rkey = `runs:${body.run.dept}`;
+      const runs = (await store.get(rkey, { type: "json" })) || [];
+      runs.unshift({ t: body.run.t || now.slice(5, 16).replace("T", " "),
+        ok: body.run.ok !== false, note: body.run.note || "", counts: body.run.counts || {} });
+      await store.setJSON(rkey, runs.slice(0, 20));
+    }
     return Response.json({ ok: true, added, total: Object.keys(data.items).length });
   }
 

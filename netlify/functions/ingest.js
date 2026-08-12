@@ -3,6 +3,15 @@
 // POST /api/ingest {items, profile?}   → 병합 저장. 기존 항목의 status·최초발견일은 보존.
 import { getStore } from "@netlify/blobs";
 
+// 한국 표준시(KST) 문자열. Netlify 서버는 UTC라 +9 변환.
+function kstNow() {
+  const d = new Date(Date.now() + 9 * 3600 * 1000);
+  return d.toISOString().replace("T", " ").slice(0, 16); // "YYYY-MM-DD HH:MM"
+}
+function kstISO() {
+  return new Date(Date.now() + 9 * 3600 * 1000).toISOString();
+}
+
 function keyOk(req) {
   const need = process.env.INGEST_KEY || "";
   return need && (req.headers.get("x-ingest-key") || "") === need;
@@ -22,7 +31,7 @@ export default async (req) => {
     try { body = await req.json(); } catch { /* noop */ }
     const incoming = Array.isArray(body.items) ? body.items : [];
     let added = 0;
-    const now = new Date().toISOString();
+    const now = kstISO();
 
     // 정책: 수집기는 공고를 추가·갱신만 한다. 원본이 플랫폼에서 내려가도 자동 삭제하지 않는다.
     // 공고 삭제는 오직 대표가 공고함/콘솔에서 🗑 삭제를 눌렀을 때만 일어난다 (DELETE /api/opps).
@@ -45,7 +54,7 @@ export default async (req) => {
     if (body.run && body.run.dept) {
       const rkey = `runs:${body.run.dept}`;
       const runs = (await store.get(rkey, { type: "json" })) || [];
-      runs.unshift({ t: body.run.t || now.slice(5, 16).replace("T", " "),
+      runs.unshift({ t: body.run.t || kstNow().slice(5),
         ok: body.run.ok !== false, note: body.run.note || "", counts: body.run.counts || {} });
       await store.setJSON(rkey, runs.slice(0, 20));
     }

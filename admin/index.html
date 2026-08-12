@@ -65,13 +65,17 @@ h1 { font-size:17px; cursor:pointer; }
   <h1 style="margin-bottom:16px">더로아 대시보드</h1>
   <p class="err" id="loginErr"></p>
   <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password">
+  <input type="text" id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="구글 OTP 6자리">
   <button id="loginBtn">들어가기</button>
 </div>
 
 <div id="app" class="wrap hidden">
   <header>
     <h1 id="home">더로아 · 공고함</h1>
-    <span class="badge" id="updated"></span>
+    <div style="display:flex; gap:8px; align-items:center">
+      <span class="badge" id="updated"></span>
+      <button class="btn" id="logoutBtn">로그아웃</button>
+    </div>
   </header>
 
   <div id="listView">
@@ -123,13 +127,14 @@ function showApp()   { $("login").classList.add("hidden");   $("app").classList.
 $("loginBtn").onclick = async () => {
   const res = await fetch("/api/auth", { method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: $("pw").value }) });
+    body: JSON.stringify({ password: $("pw").value, otp: $("otp").value.trim() }) });
   const out = await res.json().catch(() => ({}));
   if (!res.ok) { $("loginErr").textContent = out.error || "로그인 실패"; return; }
   token = out.token; localStorage.setItem("theroa_token", token);
   showApp(); load();
 };
 $("pw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loginBtn").click(); });
+$("otp").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loginBtn").click(); });
 
 // ── 목록 ────────────────────────────────────────────
 const total = (o) => { const a = o.analysis || {};
@@ -279,6 +284,7 @@ $("send").onclick = async () => {
   renderMsgs((await r2.json()).messages || []);
 };
 $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send").click(); });
+$("logoutBtn").onclick = () => { localStorage.removeItem("theroa_token"); token = ""; $("pw").value = ""; $("otp").value = ""; showLogin(); };
 $("home").onclick = () => { $("chatView").classList.add("hidden"); $("listView").classList.remove("hidden"); load(); };
 
 // ── 시작 ────────────────────────────────────────────

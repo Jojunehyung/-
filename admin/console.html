@@ -170,9 +170,7 @@ const DEPTS = [
         settings:[ {k:"notify", label:"아침 알림", type:"select", v:"off",
                     opts:[["off","끄기"],["on","켜기 (봇 토큰 필요)"]]} ] } ],
       edges:[["nara","filter"],["wish","filter"],["filter","score"],["score","dash"],["score","tg"]] },
-    runs:[ {t:"08-12 08:00", ok:true,  note:"수집 50 · 필터 18 · 신규 12"},
-           {t:"08-11 08:00", ok:true,  note:"수집 44 · 필터 15 · 신규 9"},
-           {t:"08-10 08:01", ok:false, note:"나라장터 응답 지연 — 재시도 후 정상"} ] },
+    runs: DEMO ? [ {t:"(예시) 08-12 08:00", ok:true, note:"수집 50 · 필터 18 · 신규 12"} ] : [] },
   { id:"inbound",  name:"고객상담팀",   org:"영업본부",   status:"spec", statusTxt:"지시서 준비됨" },
   { id:"proposal", name:"제안견적팀",   org:"영업본부",   status:"spec", statusTxt:"지시서 준비됨" },
   { id:"qa",       name:"QA팀",        org:"개발본부",   status:"plan", statusTxt:"신설 예정" },
@@ -346,7 +344,10 @@ async function loadServer() {
     if (!r.ok) return;
     const d = await r.json();
     for (const dept of DEPTS) {
-      if (d.runs && Array.isArray(d.runs[dept.id]) && d.runs[dept.id].length) dept.runs = d.runs[dept.id];
+      if (d.runs && Array.isArray(d.runs[dept.id])) {
+        // 서버에 실행 기록이 하나라도 있으면 데모를 완전히 대체
+        if (d.runs[dept.id].length) dept.runs = d.runs[dept.id];
+      }
       const st = d.settings && d.settings[dept.id];
       if (st && dept.graph) {
         for (const n of dept.graph.nodes) {

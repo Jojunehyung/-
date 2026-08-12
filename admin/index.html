@@ -37,6 +37,7 @@ h1 { font-size:17px; cursor:pointer; }
        background:var(--card); cursor:pointer; color:var(--ink); }
 .btn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
 .btn.chat { border-color:var(--accent); color:var(--accent); }
+.btn.del { border-color:#e5b3b3; color:#b91c1c; margin-left:auto; }
 .empty { text-align:center; color:var(--sub); padding:48px 14px; background:var(--card);
          border:1px dashed var(--line); border-radius:10px; font-size:13px; line-height:1.7; }
 .msg { max-width:88%; padding:10px 12px; border-radius:12px; margin-bottom:8px;
@@ -203,6 +204,15 @@ function rowEl(o) {
   const chatBtn = el("button", "btn chat", "AI 상담 →");
   chatBtn.onclick = () => openChat(o.id);
   acts.appendChild(chatBtn);
+
+  const delBtn = el("button", "btn del", "🗑 삭제");
+  delBtn.onclick = async () => {
+    if (!confirm(`"${o.title}"\n이 공고를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+    const res = await api("/api/opps", { method: "DELETE", body: JSON.stringify({ id: o.id }) });
+    if (res.ok) { items = items.filter((x) => x.id !== o.id); render(); }
+    else alert("삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+  };
+  acts.appendChild(delBtn);
   body.appendChild(acts);
 
   row.appendChild(body);
